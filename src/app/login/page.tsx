@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import PageTransition from '@/components/PageTransition'
 import QuantumCore from '@/components/QuantumCore'
+import EliteGemOrbit from '@/components/EliteGemOrbit'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -17,6 +18,8 @@ export default function LoginPage() {
   return (
     <PageTransition>
       <QuantumCore />
+      <EliteGemOrbit position="left" />
+      <EliteGemOrbit position="right" />
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-black via-zinc-950 to-black" />
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-amber-500/5 rounded-full blur-[150px]" />
