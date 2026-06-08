@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import PageTransition from '@/components/PageTransition'
-import GalaxyKnotCore from '@/components/GalaxyKnotCore'
+import FloatingCrystalGem from '@/components/FloatingCrystalGem'
 
 const socialPlatforms = [
   {
@@ -128,7 +128,7 @@ const cardVariants = {
 export default function SocialPage() {
   return (
     <PageTransition>
-      <GalaxyKnotCore />
+      <FloatingCrystalGem />
       <section className="relative pt-32 pb-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-amber-500/10 via-transparent to-transparent" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
