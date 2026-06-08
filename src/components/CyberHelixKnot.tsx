@@ -4,10 +4,22 @@ import { useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-const HELIX_COLORS = {
-  strandA: '#00f0ff',
-  strandB: '#a855f7',
-  core: '#06f',
+const COLOR_PALETTE = [
+  '#00f0ff', '#a855f7', '#f97316', '#22d3ee',
+  '#e879f9', '#34d399', '#fbbf24', '#f43f5e',
+]
+
+function lerpColor(c1: string, c2: string, t: number) {
+  const a = new THREE.Color(c1)
+  const b = new THREE.Color(c2)
+  return a.clone().lerp(b, t)
+}
+
+function getCyclicColor(t: number, speed: number) {
+  const idx = Math.floor(t * speed) % COLOR_PALETTE.length
+  const nextIdx = (idx + 1) % COLOR_PALETTE.length
+  const frac = (t * speed) % 1
+  return lerpColor(COLOR_PALETTE[idx], COLOR_PALETTE[nextIdx], frac)
 }
 
 function helixKnotPoint(t: number, strandOffset: number, twist: number) {
@@ -31,33 +43,22 @@ function helixKnotPoint(t: number, strandOffset: number, twist: number) {
   return new THREE.Vector3(nx, ny, nz)
 }
 
-function HelixStrand({ strandOffset, color, twistSpeed }: { strandOffset: number; color: string; twistSpeed: number }) {
+function HelixStrand({ strandOffset, speedOffset, twistSpeed }: { strandOffset: number; speedOffset: number; twistSpeed: number }) {
   const meshRef = useRef<THREE.Mesh>(null!)
-  const pointsRef = useRef<THREE.Vector3[]>([])
+  const matRef = useRef<THREE.MeshPhysicalMaterial>(null!)
 
-  const { geometry, particlePositions } = useMemo(() => {
+  const { geometry } = useMemo(() => {
     const segments = 200
     const pts: THREE.Vector3[] = []
     for (let i = 0; i <= segments; i++) {
       const t = i / segments
       pts.push(helixKnotPoint(t, strandOffset, 0))
     }
-    pointsRef.current = pts
 
     const curve = new THREE.CatmullRomCurve3(pts)
     const tubeGeo = new THREE.TubeGeometry(curve, 180, 0.06, 6, false)
 
-    const particleCount = 120
-    const posArray = new Float32Array(particleCount * 3)
-    for (let i = 0; i < particleCount; i++) {
-      const t = i / particleCount
-      const pt = helixKnotPoint(t, strandOffset, 0)
-      posArray[i * 3] = pt.x
-      posArray[i * 3 + 1] = pt.y
-      posArray[i * 3 + 2] = pt.z
-    }
-
-    return { geometry: tubeGeo, particlePositions: posArray }
+    return { geometry: tubeGeo }
   }, [strandOffset])
 
   useFrame((state) => {
@@ -90,13 +91,22 @@ function HelixStrand({ strandOffset, color, twistSpeed }: { strandOffset: number
 
     positions.needsUpdate = true
     geometry.computeVertexNormals()
+
+    if (matRef.current) {
+      const col = getCyclicColor(time + speedOffset, 0.15)
+      matRef.current.color = col
+      matRef.current.emissive = col
+      const pulse = 0.5 + 0.5 * Math.sin(time * 2 + speedOffset)
+      matRef.current.emissiveIntensity = 0.4 + 0.6 * pulse
+    }
   })
 
   return (
     <mesh ref={meshRef} geometry={geometry}>
       <meshPhysicalMaterial
-        color={color}
-        emissive={color}
+        ref={matRef}
+        color="#00f0ff"
+        emissive="#00f0ff"
         emissiveIntensity={0.8}
         metalness={1}
         roughness={0.2}
@@ -110,17 +120,25 @@ function HelixStrand({ strandOffset, color, twistSpeed }: { strandOffset: number
 
 function CoreGlow() {
   const ref = useRef<THREE.Mesh>(null!)
+  const matRef = useRef<THREE.MeshPhysicalMaterial>(null!)
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime()
     ref.current.rotation.x = Math.sin(t * 0.1) * 0.1
     ref.current.rotation.y = t * 0.05
+
+    if (matRef.current) {
+      const col = getCyclicColor(t + 2, 0.1)
+      matRef.current.color = col
+      matRef.current.emissive = col
+    }
   })
 
   return (
     <mesh ref={ref}>
       <icosahedronGeometry args={[1, 2]} />
       <meshPhysicalMaterial
+        ref={matRef}
         color="#06f"
         emissive="#06f"
         emissiveIntensity={0.3}
@@ -181,14 +199,29 @@ function Sparkles() {
 }
 
 function CyberHelixScene() {
+  const lightARef = useRef<THREE.PointLight>(null!)
+  const lightBRef = useRef<THREE.PointLight>(null!)
+
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime()
+    if (lightARef.current) {
+      const col = getCyclicColor(t, 0.12)
+      lightARef.current.color = col
+    }
+    if (lightBRef.current) {
+      const col = getCyclicColor(t + 3, 0.12)
+      lightBRef.current.color = col
+    }
+  })
+
   return (
     <>
       <ambientLight intensity={0.2} />
-      <pointLight position={[5, 5, 5]} intensity={0.5} color="#00f0ff" />
-      <pointLight position={[-5, -5, -5]} intensity={0.5} color="#a855f7" />
+      <pointLight ref={lightARef} position={[5, 5, 5]} intensity={0.8} color="#00f0ff" />
+      <pointLight ref={lightBRef} position={[-5, -5, -5]} intensity={0.8} color="#a855f7" />
 
-      <HelixStrand strandOffset={0} color={HELIX_COLORS.strandA} twistSpeed={0.3} />
-      <HelixStrand strandOffset={Math.PI} color={HELIX_COLORS.strandB} twistSpeed={0.3} />
+      <HelixStrand strandOffset={0} speedOffset={0} twistSpeed={0.3} />
+      <HelixStrand strandOffset={Math.PI} speedOffset={2} twistSpeed={0.3} />
 
       <CoreGlow />
       <Sparkles />
