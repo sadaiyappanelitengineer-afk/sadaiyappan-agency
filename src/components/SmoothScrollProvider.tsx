@@ -15,12 +15,14 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
       const LenisModule = await import('lenis')
       const Lenis = LenisModule.default
       const lenis = new Lenis({
-        duration: 1.2,
-        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        duration: 2.2,
+        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -12 * t)),
         smoothWheel: true,
         orientation: 'vertical' as const,
         gestureOrientation: 'vertical' as const,
-        touchMultiplier: 2,
+        touchMultiplier: 2.5,
+        wheelMultiplier: 1.2,
+        infinite: false,
       })
 
       lenisRef.current = lenis as unknown as LenisInstance
