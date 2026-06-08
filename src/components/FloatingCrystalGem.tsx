@@ -4,6 +4,18 @@ import { useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
+const GEM_COLORS = [
+  '#f5f0eb', '#f43f5e', '#a855f7', '#06b6d4',
+  '#22c55e', '#eab308', '#f97316', '#ec4899',
+]
+
+function getGemColor(t: number, speed: number) {
+  const idx = Math.floor(t * speed) % GEM_COLORS.length
+  const nextIdx = (idx + 1) % GEM_COLORS.length
+  const frac = (t * speed) % 1
+  return new THREE.Color(GEM_COLORS[idx]).lerp(new THREE.Color(GEM_COLORS[nextIdx]), frac)
+}
+
 function Crystal() {
   const meshRef = useRef<THREE.Mesh>(null!)
   const matRef = useRef<THREE.MeshPhysicalMaterial>(null!)
@@ -35,8 +47,11 @@ function Crystal() {
     meshRef.current.position.y = Math.sin(t * 0.4) * 0.15
 
     if (matRef.current) {
-      const pulse = 0.7 + 0.3 * Math.sin(t * 0.6)
-      matRef.current.emissiveIntensity = 0.1 * pulse
+      const col = getGemColor(t, 0.12)
+      matRef.current.color = col
+      matRef.current.emissive = col
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.8)
+      matRef.current.emissiveIntensity = 0.1 + 0.3 * pulse
     }
   })
 
@@ -63,6 +78,7 @@ function Crystal() {
 
 function InnerGem() {
   const meshRef = useRef<THREE.Mesh>(null!)
+  const matRef = useRef<THREE.MeshPhysicalMaterial>(null!)
 
   const geometry = useMemo(() => {
     return new THREE.OctahedronGeometry(0.6, 0)
@@ -73,11 +89,18 @@ function InnerGem() {
     meshRef.current.rotation.x = -Math.sin(t * 0.25) * 0.4
     meshRef.current.rotation.y = -t * 0.2
     meshRef.current.position.y = Math.sin(t * 0.4) * 0.15
+
+    if (matRef.current) {
+      const col = getGemColor(t + 1.5, 0.1)
+      matRef.current.color = col
+      matRef.current.emissive = col
+    }
   })
 
   return (
     <mesh ref={meshRef} geometry={geometry}>
       <meshPhysicalMaterial
+        ref={matRef}
         color="#d4c5b0"
         emissive="#c8a84e"
         emissiveIntensity={0.15}
