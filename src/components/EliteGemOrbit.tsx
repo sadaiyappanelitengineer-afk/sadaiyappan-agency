@@ -4,6 +4,18 @@ import { useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
+const ELITE_COLORS = [
+  '#f5f0eb', '#f43f5e', '#a855f7', '#06b6d4',
+  '#22c55e', '#eab308', '#f97316', '#ec4899',
+]
+
+function getEliteColor(t: number, speed: number) {
+  const idx = Math.floor(t * speed) % ELITE_COLORS.length
+  const nextIdx = (idx + 1) % ELITE_COLORS.length
+  const frac = (t * speed) % 1
+  return new THREE.Color(ELITE_COLORS[idx]).lerp(new THREE.Color(ELITE_COLORS[nextIdx]), frac)
+}
+
 function Gemstone() {
   const meshRef = useRef<THREE.Mesh>(null!)
   const matRef = useRef<THREE.MeshPhysicalMaterial>(null!)
@@ -18,8 +30,11 @@ function Gemstone() {
     meshRef.current.rotation.y = t * 0.2
 
     if (matRef.current) {
-      const pulse = 0.6 + 0.4 * Math.sin(t * 0.7)
-      matRef.current.emissiveIntensity = 0.2 * pulse
+      const col = getEliteColor(t, 0.12)
+      matRef.current.color = col
+      matRef.current.emissive = col
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.8)
+      matRef.current.emissiveIntensity = 0.1 + 0.3 * pulse
     }
   })
 
@@ -41,8 +56,9 @@ function Gemstone() {
   )
 }
 
-function OrbitalRing({ radius, tiltX, tiltZ, speed, color, opacity }: { radius: number; tiltX: number; tiltZ: number; speed: number; color: string; opacity: number }) {
+function OrbitalRing({ radius, tiltX, tiltZ, speed, color, opacity, colorOffset }: { radius: number; tiltX: number; tiltZ: number; speed: number; color: string; opacity: number; colorOffset?: number }) {
   const meshRef = useRef<THREE.Mesh>(null!)
+  const matRef = useRef<THREE.MeshBasicMaterial>(null!)
 
   const geometry = useMemo(() => {
     const pts: THREE.Vector3[] = []
@@ -60,17 +76,23 @@ function OrbitalRing({ radius, tiltX, tiltZ, speed, color, opacity }: { radius: 
     meshRef.current.rotation.x = tiltX + Math.sin(t * 0.1) * 0.05
     meshRef.current.rotation.z = tiltZ + Math.cos(t * 0.12) * 0.05
     meshRef.current.rotation.y = t * speed
+
+    if (matRef.current) {
+      const col = getEliteColor(t + (colorOffset ?? 0), 0.08)
+      matRef.current.color = col
+    }
   })
 
   return (
     <mesh ref={meshRef} geometry={geometry}>
-      <meshBasicMaterial color={color} transparent opacity={opacity} />
+      <meshBasicMaterial ref={matRef} color={color} transparent opacity={opacity} />
     </mesh>
   )
 }
 
-function OrbitalParticles({ count = 60, radius, speed }: { count?: number; radius: number; speed: number }) {
+function OrbitalParticles({ count = 60, radius, speed, colorOffset }: { count?: number; radius: number; speed: number; colorOffset?: number }) {
   const ref = useRef<THREE.Points>(null!)
+  const matRef = useRef<THREE.PointsMaterial>(null!)
 
   const { positions, offsets } = useMemo(() => {
     const pos = new Float32Array(count * 3)
@@ -95,6 +117,11 @@ function OrbitalParticles({ count = 60, radius, speed }: { count?: number; radiu
       pos[i * 3 + 2] = radius * Math.sin(angle)
     }
     ref.current.geometry.attributes.position.needsUpdate = true
+
+    if (matRef.current) {
+      const col = getEliteColor(t + (colorOffset ?? 0), 0.08)
+      matRef.current.color = col
+    }
   })
 
   return (
@@ -103,6 +130,7 @@ function OrbitalParticles({ count = 60, radius, speed }: { count?: number; radiu
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
       <pointsMaterial
+        ref={matRef}
         size={0.03}
         color="#c8a84e"
         transparent
@@ -185,13 +213,13 @@ function GemScene({ seed }: { seed: number }) {
 
       <Gemstone />
 
-      <OrbitalRing radius={0.9} tiltX={0.3} tiltZ={0.1} speed={0.15} color="#c8a84e" opacity={0.2} />
-      <OrbitalRing radius={1.1} tiltX={-0.4} tiltZ={0.2} speed={-0.12} color="#f5f0eb" opacity={0.15} />
-      <OrbitalRing radius={1.3} tiltX={0.2} tiltZ={-0.3} speed={0.1} color="#c8a84e" opacity={0.1} />
+      <OrbitalRing radius={0.9} tiltX={0.3} tiltZ={0.1} speed={0.15} color="#c8a84e" opacity={0.2} colorOffset={0} />
+      <OrbitalRing radius={1.1} tiltX={-0.4} tiltZ={0.2} speed={-0.12} color="#f5f0eb" opacity={0.15} colorOffset={2} />
+      <OrbitalRing radius={1.3} tiltX={0.2} tiltZ={-0.3} speed={0.1} color="#c8a84e" opacity={0.1} colorOffset={4} />
 
-      <OrbitalParticles count={30} radius={0.9} speed={0.15} />
-      <OrbitalParticles count={25} radius={1.1} speed={-0.12} />
-      <OrbitalParticles count={20} radius={1.3} speed={0.1} />
+      <OrbitalParticles count={30} radius={0.9} speed={0.15} colorOffset={1} />
+      <OrbitalParticles count={25} radius={1.1} speed={-0.12} colorOffset={3} />
+      <OrbitalParticles count={20} radius={1.3} speed={0.1} colorOffset={5} />
 
       <FloatingParticles count={80} />
     </group>
